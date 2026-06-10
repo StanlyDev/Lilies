@@ -71,19 +71,10 @@
     100% { opacity: 1; transform: translateY(20px); }
   }
 
-  /* En móvil el hint queda un poco más alto para no chocar con la barra del navegador */
   @media (max-width: 768px) {
-    #scroll-hint {
-      bottom: 3.5rem;
-    }
-    .mouse-btn {
-      width: 32px;
-      height: 64px;
-    }
-    .mouse-scroll {
-      width: 16px;
-      height: 16px;
-    }
+    #scroll-hint { bottom: 3.5rem; }
+    .mouse-btn   { width: 32px; height: 64px; }
+    .mouse-scroll{ width: 16px; height: 16px; }
   }
 </style>
 </head>
@@ -122,14 +113,16 @@
   const frames = new Array(TOTAL + 1);
   let currentFrame = 1;
   let rafPending   = false;
+  let dpr          = window.devicePixelRatio || 1;
 
   /* ── utilidades ─────────────────────────────────────── */
   function pad(n) { return String(n).padStart(PAD, '0'); }
   function url(i) { return BASE_URL + pad(i) + EXT; }
 
-  /* ── dibujo con cover-fit ────────────────────────────── */
+  /* ── dibujo con cover-fit (usa dimensiones CSS, no físicas) ── */
   function drawFrame(img) {
     if (!img || !img.complete || !img.naturalWidth) return;
+    // cw/ch son los píxeles físicos del canvas (ya multiplicados por dpr)
     const cw = canvas.width,  ch = canvas.height;
     const iw = img.naturalWidth, ih = img.naturalHeight;
     const scale = Math.max(cw / iw, ch / ih);   // cover
@@ -139,16 +132,25 @@
     ctx.drawImage(img, sx, sy, sw, sh);
   }
 
-  /* ── resize: recalcula canvas y redibuja ─────────────── */
+  /* ── resize: respeta DPR para nitidez en HiDPI ──────── */
   function resizeCanvas() {
-    canvas.width  = sticky.offsetWidth;
-    canvas.height = sticky.offsetHeight;
+    dpr = window.devicePixelRatio || 1;
+
+    const cssW = sticky.offsetWidth;
+    const cssH = sticky.offsetHeight;
+
+    // Tamaño físico del buffer (nítido en Retina)
+    canvas.width  = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+
+    // El CSS sigue siendo 100%x100% (definido en la hoja de estilos)
+    // No hace falta tocar canvas.style aquí porque ya tiene width/height: 100%
+
     if (frames[currentFrame] && frames[currentFrame].complete) {
       drawFrame(frames[currentFrame]);
     }
   }
 
-  // ResizeObserver cubre tanto resize de ventana como cambio de orientación
   const ro = new ResizeObserver(resizeCanvas);
   ro.observe(sticky);
   resizeCanvas();
@@ -185,13 +187,11 @@
       const progress = Math.min(Math.max(traveled / total, 0), 1);
       const idx      = Math.min(Math.round(progress * (TOTAL - 1)) + 1, TOTAL);
 
-      // Oculta el hint en cuanto empieza el scroll
       if (hint) hint.style.opacity = progress > 0.02 ? '0' : '1';
 
       if (idx !== currentFrame) {
         currentFrame = idx;
 
-        // precarga lookahead
         const ahead = Math.min(idx + LOOKAHEAD, TOTAL);
         for (let i = idx; i <= ahead; i++) {
           if (!frames[i]) {
@@ -213,7 +213,6 @@
 
   window.addEventListener('scroll', onScroll, { passive: true });
 
-  // orientationchange también dispara resize, pero por si acaso
   window.addEventListener('orientationchange', function () {
     setTimeout(resizeCanvas, 200);
   });
