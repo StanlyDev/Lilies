@@ -8,7 +8,7 @@
   html, body { margin: 0; padding: 0; min-height: 100%; background: #060608; }
   body { margin: 0; padding: 0; background: #060608; }
 
-  /* Reduje a 800vh. 1200vh para 9 líneas es un exceso, pruébalo y ajústalo */
+  /* --- SECCIÓN PARALLAX --- */
   .vs-section {
     position: relative;
     height: 800vh; 
@@ -31,7 +31,7 @@
     background: #060608;
   }
 
-  /* Contenedor del poema */
+  /* Contenedor del poema principal */
   #poem-container {
     position: absolute;
     top: 50%;
@@ -40,7 +40,7 @@
     width: 80%;
     max-width: 600px;
     text-align: center;
-    pointer-events: none; /* Para que no bloquee el click o scroll */
+    pointer-events: none;
     z-index: 5;
   }
 
@@ -55,9 +55,7 @@
     color: #fff;
     opacity: 0;
     white-space: nowrap;
-    /* Sombra fuerte para asegurar legibilidad contra las fotos */
     text-shadow: 2px 2px 8px rgba(0,0,0,0.9), 0px 0px 4px rgba(0,0,0,0.8);
-    /* Clip path simulará la escritura. Empieza todo oculto */
     clip-path: inset(0 100% 0 0);
   }
 
@@ -106,11 +104,69 @@
     100% { opacity: 1; transform: translateY(20px); }
   }
 
+  /* --- SECCIÓN EPÍLOGO (POEMAS ALEATORIOS) --- */
+  .epilogue-section {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #060608;
+    z-index: 20;
+    padding: 2rem;
+    box-sizing: border-box;
+  }
+
+  .poem-card {
+    text-align: center;
+    max-width: 600px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3rem;
+  }
+
+  #random-poem {
+    font-family: 'Dancing Script', cursive;
+    font-size: 2rem;
+    color: #e0e0e0;
+    line-height: 1.5;
+    min-height: 200px; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.4s ease;
+  }
+
+  #btn-next-poem {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: #fff;
+    padding: 12px 30px;
+    font-family: sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 30px;
+    transition: all 0.3s ease;
+  }
+
+  #btn-next-poem:hover {
+    background: #fff;
+    color: #060608;
+  }
+
+  .fade-out { opacity: 0 !important; }
+
   @media (max-width: 768px) {
     #scroll-hint { bottom: 3.5rem; }
     .mouse-btn   { width: 32px; height: 64px; }
     .mouse-scroll{ width: 16px; height: 16px; }
     .poem-line { font-size: 1.8rem; white-space: normal; }
+    #random-poem { font-size: 1.5rem; }
   }
 </style>
 </head>
@@ -140,12 +196,22 @@
         <span>Scroll</span>
       </div>
     </div>
+  </div>
+</div>
 
+<div class="epilogue-section" id="epilogue">
+  <div class="poem-card">
+    <p id="random-poem">
+      El viaje ha terminado, pero la belleza permanece.<br>
+      Descubre algo nuevo.
+    </p>
+    <button id="btn-next-poem">Leer otro poema</button>
   </div>
 </div>
 
 <script>
 (function () {
+  /* ── LÓGICA DEL PARALLAX Y CANVAS ── */
   const BASE_URL  = '/img/Lilies2/Lilies2_';
   const EXT       = '.jpg';
   const TOTAL     = 270;
@@ -225,7 +291,6 @@
 
       if (hint) hint.style.opacity = progress > 0.02 ? '0' : '1';
 
-      // Lógica de Canvas
       if (idx !== currentFrame) {
         currentFrame = idx;
         const ahead = Math.min(idx + LOOKAHEAD, TOTAL);
@@ -244,21 +309,14 @@
         }
       }
 
-      // Lógica del Poema - Vinculado estrictamente al progreso
       const numLines = poemLines.length;
-      // Dividimos el scroll total en segmentos iguales para cada línea
       const currentSegment = progress * numLines;
       const activeLineIndex = Math.floor(currentSegment);
 
       poemLines.forEach((line, index) => {
         if (index === activeLineIndex) {
-          // Línea actual: calculamos su progreso interno (de 0 a 1)
           const localProgress = currentSegment - index;
           line.style.opacity = 1;
-          
-          // Fase 1: Escritura (0% al 40% del segmento)
-          // Fase 2: Pausa visible (40% al 80% del segmento)
-          // Fase 3: Desvanecimiento (80% al 100% del segmento)
           
           if (localProgress < 0.4) {
              const typingProgress = (localProgress / 0.4) * 100;
@@ -272,9 +330,7 @@
              const fadeOutProgress = (localProgress - 0.8) / 0.2;
              line.style.opacity = 1 - fadeOutProgress;
           }
-
         } else {
-          // Ocultar líneas que no están activas
           line.style.opacity = 0;
           line.style.clipPath = `inset(0 100% 0 0)`;
         }
@@ -288,6 +344,46 @@
   });
 
   onScroll();
+
+  /* ── LÓGICA DEL GENERADOR DE POEMAS ALEATORIOS ── */
+  const poems = [
+    "Desnuda eres tan simple como una de tus manos:<br>lisa, terrestre, mínima, redonda, transparente.<br>— Pablo Neruda",
+    "Eres la belleza que no se explica,<br>el misterio que detiene el tiempo,<br>y la luz que no ciega, pero ilumina.<br>— Anónimo",
+    "¿Qué es poesía?, dices mientras clavas<br>en mi pupila tu pupila azul.<br>¡Qué es poesía! ¿Y tú me lo preguntas?<br>Poesía... eres tú.<br>— Gustavo Adolfo Bécquer",
+    "Rosa divina que en gentil cultura<br>eres con tu fragante sutileza<br>magisterio purpúreo en la belleza.<br>— Sor Juana Inés de la Cruz",
+    "Hay en tu gracia un eco de otro mundo,<br>un no sé qué de estrella fugitiva,<br>que hace que al mirarte, la vida cobre sentido.<br>— Anónimo",
+    "Tu caminar es como el oleaje manso,<br>no busca romper la roca,<br>solo acaricia la orilla dejándola perfecta.<br>— Anónimo",
+    "Como la brisa que no se ve pero se siente,<br>así es tu sola presencia:<br>un arte silencioso que todo lo embellece.<br>— Anónimo",
+    "No hay simetría en este mundo que iguale<br>la extraña y perfecta manera<br>en la que existes, simplemente.<br>— Anónimo",
+    "Si el universo tuviera rostro,<br>buscaría robarte los gestos<br>para entender cómo ser infinito.<br>— Anónimo",
+    "Bendita tu luz y la sombra que proyectas,<br>porque hasta la nada se viste de gala<br>cuando pasas junto a ella.<br>— Anónimo",
+    "Eres como una biblioteca en llamas:<br>fascinante, destructiva, hermosa,<br>e imposible de ignorar.<br>— Anónimo",
+    "Llevas la primavera en los pasos<br>y el invierno no se atreve a tocar<br>la tierra por donde caminas.<br>— Anónimo",
+    "Tu belleza no es de las que gritan,<br>es de las que susurran y dejan sordo<br>al que no sabe escuchar con los ojos.<br>— Anónimo",
+    "Toda tú eres un paisaje entero<br>donde la prisa pierde su nombre<br>y el reloj decide detenerse.<br>— Anónimo",
+    "Algunos monumentos están hechos de piedra.<br>Tú estás hecha de instantes,<br>y aún así, eres mucho más eterna.<br>— Anónimo"
+  ];
+
+  const poemElement = document.getElementById('random-poem');
+  const btnNext = document.getElementById('btn-next-poem');
+  let lastIndex = -1;
+
+  btnNext.addEventListener('click', function() {
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * poems.length);
+    } while (newIndex === lastIndex);
+    
+    lastIndex = newIndex;
+
+    poemElement.classList.add('fade-out');
+    
+    setTimeout(() => {
+      poemElement.innerHTML = poems[newIndex];
+      poemElement.classList.remove('fade-out');
+    }, 400);
+  });
+
 })();
 </script>
 
