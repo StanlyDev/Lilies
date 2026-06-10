@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; padding: 0; min-height: 100%; background: #060608; }
   body { margin: 0; padding: 0; background: #060608; }
 
+  /* Reduje a 800vh. 1200vh para 9 líneas es un exceso, pruébalo y ajústalo */
   .vs-section {
     position: relative;
-    height: 1200vh;
+    height: 800vh; 
     background: #060608;
   }
   .vs-sticky {
@@ -27,10 +29,36 @@
     height: 100%;
     display: block;
     background: #060608;
-    inset: 0;
+  }
+
+  /* Contenedor del poema */
+  #poem-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 600px;
+    text-align: center;
+    pointer-events: none; /* Para que no bloquee el click o scroll */
+    z-index: 5;
+  }
+
+  .poem-line {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: 100%;
-    height: 100%;
-    display: block;
+    font-family: 'Dancing Script', cursive;
+    font-size: 2.5rem;
+    color: #fff;
+    opacity: 0;
+    white-space: nowrap;
+    /* Sombra fuerte para asegurar legibilidad contra las fotos */
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.9), 0px 0px 4px rgba(0,0,0,0.8);
+    /* Clip path simulará la escritura. Empieza todo oculto */
+    clip-path: inset(0 100% 0 0);
   }
 
   #scroll-hint {
@@ -82,6 +110,7 @@
     #scroll-hint { bottom: 3.5rem; }
     .mouse-btn   { width: 32px; height: 64px; }
     .mouse-scroll{ width: 16px; height: 16px; }
+    .poem-line { font-size: 1.8rem; white-space: normal; }
   }
 </style>
 </head>
@@ -90,6 +119,18 @@
 <div class="vs-section" id="vs-section">
   <div class="vs-sticky" id="vs-sticky">
     <canvas id="frame-canvas"></canvas>
+
+    <div id="poem-container">
+      <div class="poem-line">No floreces para complacer al ojo ajeno.</div>
+      <div class="poem-line">Te alzas en el fango,</div>
+      <div class="poem-line">vistes tu tallo de gala,</div>
+      <div class="poem-line">y abres tus pétalos de terciopelo morado</div>
+      <div class="poem-line">ante el frío de la tarde.</div>
+      <div class="poem-line">Eres el lirio que no pide permiso,</div>
+      <div class="poem-line">el que convierte la sombra en color</div>
+      <div class="poem-line">y el silencio en belleza.</div>
+      <div class="poem-line">— Anónimo</div>
+    </div>
 
     <div id="scroll-hint">
       <div class="container_mouse">
@@ -116,43 +157,33 @@
   const section = document.getElementById('vs-section');
   const sticky  = document.getElementById('vs-sticky');
   const hint    = document.getElementById('scroll-hint');
+  const poemLines = document.querySelectorAll('.poem-line');
 
   const frames = new Array(TOTAL + 1);
   let currentFrame = 1;
   let rafPending   = false;
   let dpr          = window.devicePixelRatio || 1;
 
-  /* ── utilidades ─────────────────────────────────────── */
   function pad(n) { return String(n).padStart(PAD, '0'); }
   function url(i) { return BASE_URL + pad(i) + EXT; }
 
-  /* ── dibujo con cover-fit (usa dimensiones CSS, no físicas) ── */
   function drawFrame(img) {
     if (!img || !img.complete || !img.naturalWidth) return;
-    // cw/ch son los píxeles físicos del canvas (ya multiplicados por dpr)
     const cw = canvas.width,  ch = canvas.height;
     const iw = img.naturalWidth, ih = img.naturalHeight;
-    const scale = Math.max(cw / iw, ch / ih);   // cover
+    const scale = Math.max(cw / iw, ch / ih);
     const sw = iw * scale, sh = ih * scale;
     const sx = (cw - sw) / 2, sy = (ch - sh) / 2;
     ctx.clearRect(0, 0, cw, ch);
     ctx.drawImage(img, sx, sy, sw, sh);
   }
 
-  /* ── resize: respeta DPR para nitidez en HiDPI ──────── */
   function resizeCanvas() {
     dpr = window.devicePixelRatio || 1;
-
     const cssW = sticky.offsetWidth;
     const cssH = sticky.offsetHeight;
-
-    // Tamaño físico del buffer (nítido en Retina)
     canvas.width  = Math.round(cssW * dpr);
     canvas.height = Math.round(cssH * dpr);
-
-    // El CSS sigue siendo 100%x100% (definido en la hoja de estilos)
-    // No hace falta tocar canvas.style aquí porque ya tiene width/height: 100%
-
     if (frames[currentFrame] && frames[currentFrame].complete) {
       drawFrame(frames[currentFrame]);
     }
@@ -162,7 +193,6 @@
   ro.observe(sticky);
   resizeCanvas();
 
-  /* ── precarga ────────────────────────────────────────── */
   function preloadRange(from, to, onDone) {
     let count = to - from + 1;
     for (let i = from; i <= to; i++) {
@@ -181,7 +211,6 @@
   });
   preloadRange(31, TOTAL);
 
-  /* ── scroll ──────────────────────────────────────────── */
   function onScroll() {
     if (rafPending) return;
     rafPending = true;
@@ -196,9 +225,9 @@
 
       if (hint) hint.style.opacity = progress > 0.02 ? '0' : '1';
 
+      // Lógica de Canvas
       if (idx !== currentFrame) {
         currentFrame = idx;
-
         const ahead = Math.min(idx + LOOKAHEAD, TOTAL);
         for (let i = idx; i <= ahead; i++) {
           if (!frames[i]) {
@@ -207,7 +236,6 @@
             frames[i] = img;
           }
         }
-
         const target = frames[idx];
         if (target && target.complete) {
           drawFrame(target);
@@ -215,11 +243,46 @@
           target.onload = function () { drawFrame(target); };
         }
       }
+
+      // Lógica del Poema - Vinculado estrictamente al progreso
+      const numLines = poemLines.length;
+      // Dividimos el scroll total en segmentos iguales para cada línea
+      const currentSegment = progress * numLines;
+      const activeLineIndex = Math.floor(currentSegment);
+
+      poemLines.forEach((line, index) => {
+        if (index === activeLineIndex) {
+          // Línea actual: calculamos su progreso interno (de 0 a 1)
+          const localProgress = currentSegment - index;
+          line.style.opacity = 1;
+          
+          // Fase 1: Escritura (0% al 40% del segmento)
+          // Fase 2: Pausa visible (40% al 80% del segmento)
+          // Fase 3: Desvanecimiento (80% al 100% del segmento)
+          
+          if (localProgress < 0.4) {
+             const typingProgress = (localProgress / 0.4) * 100;
+             line.style.clipPath = `inset(0 ${100 - typingProgress}% 0 0)`;
+             line.style.opacity = 1;
+          } else if (localProgress >= 0.4 && localProgress < 0.8) {
+             line.style.clipPath = `inset(0 0 0 0)`;
+             line.style.opacity = 1;
+          } else {
+             line.style.clipPath = `inset(0 0 0 0)`;
+             const fadeOutProgress = (localProgress - 0.8) / 0.2;
+             line.style.opacity = 1 - fadeOutProgress;
+          }
+
+        } else {
+          // Ocultar líneas que no están activas
+          line.style.opacity = 0;
+          line.style.clipPath = `inset(0 100% 0 0)`;
+        }
+      });
     });
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
-
   window.addEventListener('orientationchange', function () {
     setTimeout(resizeCanvas, 200);
   });
