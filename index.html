@@ -773,6 +773,12 @@
 
   renderPlaylist();
 
+  // Esto intentará reproducir la canción al cargar
+window.addEventListener('DOMContentLoaded', () => {
+  loadTrack(currentIndex, true);
+});
+
+
   toggle.addEventListener('click', function () {
     card.classList.toggle('hidden');
     if (!card.classList.contains('hidden') && !audio.src) {
