@@ -772,6 +772,23 @@
   }
 
   renderPlaylist();
+  loadTrack(currentIndex, false); // carga sin reproducir
+
+  // Autoplay en el primer scroll o primer toque del usuario
+  let autoplayTriggered = false;
+  function triggerAutoplay() {
+    if (autoplayTriggered) return;
+    autoplayTriggered = true;
+    audio.play().then(setPlaying).catch(console.warn);
+    // Abre el reproductor flotante automáticamente
+    card.classList.remove('hidden');
+    window.removeEventListener('scroll', triggerAutoplay);
+    window.removeEventListener('touchstart', triggerAutoplay);
+    window.removeEventListener('click', triggerAutoplay);
+  }
+  window.addEventListener('scroll',     triggerAutoplay, { passive: true });
+  window.addEventListener('touchstart', triggerAutoplay, { passive: true });
+  window.addEventListener('click',      triggerAutoplay);
 
   toggle.addEventListener('click', function () {
     card.classList.toggle('hidden');
