@@ -742,7 +742,10 @@
   const timeFull     = document.getElementById('time-full');
   const playingAnim  = document.getElementById('playing-anim');
 
-  let currentIndex = 4;
+  let currentIndex = playlist.findIndex(function (track) {
+    return track.file === 'Lana del Rey - Say Yes To Heaven.mp3';
+  });
+  if (currentIndex === -1) currentIndex = 0;
   let isPlaying    = false;
 
   function fmt(s) {
